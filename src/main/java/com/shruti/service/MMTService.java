@@ -1,13 +1,21 @@
 package com.shruti.service;
 
+import java.awt.PageAttributes.MediaType;
+
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.BodyInserter;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.shruti.request.Passenger;
 import com.shruti.response.Ticket;
+
+import reactor.core.publisher.Mono;
 
 @Service
 public class MMTService {
@@ -19,29 +27,45 @@ public class MMTService {
 	private   String IRCTC_GET_TICKET_URL;  // As per requirement IP will change of EC2
 	
 	public Ticket processTicketBooking(Passenger p) {
+		WebClient webclient = WebClient.create();
 		
-		RestTemplate rt = new RestTemplate();
+		Ticket ticket = webclient.post() //post request
+			.uri(IRCTC_BOOK_TICKET_URL) //To which URL on which we need to send post request
+			.body(BodyInserters.fromObject(p)) //What data in body
+			.header("Content-Type", "application/json") //body type
+			.accept(org.springframework.http.MediaType.APPLICATION_JSON)
+			.retrieve() 
+			.bodyToMono(Ticket.class)
+			.block();
 		
-		ResponseEntity<Ticket> postForEntity = rt.postForEntity(IRCTC_BOOK_TICKET_URL, p, Ticket.class);
 		
-		HttpStatusCode statusCode = postForEntity.getStatusCode();
-		System.out.println(statusCode);
-		
-			System.out.println("Inside if block");
-			Ticket ticket = postForEntity.getBody();
+		if(ticket != null) {
 			return ticket;
-	
+		}
+		else {
+			return null;
+		}
+		
 	}
 	
 	public Ticket getTicketInfo(String ticketId) {
+		WebClient webclient = WebClient.create(); //creating instance
 		
-		RestTemplate rt = new RestTemplate();
+		Ticket ticket = webclient.get(). //represents HTTP get request
+			uri(IRCTC_GET_TICKET_URL,ticketId) //represents to which URI we should call
+			.accept(org.springframework.http.MediaType.APPLICATION_JSON)
+			.retrieve() //take response from response body
+			.bodyToMono(Ticket.class) //bind response body to java object
+			.block(); //enable synchronous communication
 		
-		ResponseEntity<Ticket> forEntity = rt.getForEntity(IRCTC_GET_TICKET_URL, Ticket.class, ticketId);
+		if(ticket!=null) {
+			return ticket;
+		}
+		else {
+			return null;
+		}		
 		
-		Ticket ticket = forEntity.getBody();
-		
-		return ticket;
+
 	}
 	
 }
